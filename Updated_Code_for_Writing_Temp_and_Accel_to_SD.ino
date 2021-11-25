@@ -2,6 +2,14 @@
 
 #include <SD.h>
 
+//Libraries for Barometer
+#include <SFE_BMP180.h>
+#include <Wire.h>
+
+#define ALTITUDE 1655.0 
+
+SFE_BMP180 pressure;
+
 /*
   SD card read/write
 
@@ -28,9 +36,9 @@ float voltage_reading;
 float temperatureC; 
 
 //Code for accelerometer
-#include<Wire.h>
-const int MPU=0x68; 
-int16_t AcX,AcY,AcZ,Tmp,GyX,GyY,GyZ;
+//#include<Wire.h>
+//const int MPU=0x68; 
+//int16_t AcX,AcY,AcZ,Tmp,GyX,GyY,GyZ;
 
 
 void setup() {
@@ -40,11 +48,11 @@ void setup() {
     ; // wait for serial port to connect. Needed for native USB port only
 
   //This code sets up the transmition of data from the accelerometer
-  Wire.begin();
-  Wire.beginTransmission(MPU);
-  Wire.write(0x6B); 
-  Wire.write(0);    
-  Wire.endTransmission(true);
+  //Wire.begin();
+  //Wire.beginTransmission(MPU);
+  //Wire.write(0x6B); 
+ // Wire.write(0);    
+  //Wire.endTransmission(true);
   }
 
 
@@ -63,9 +71,9 @@ void setup() {
   // if the file opened properly, write to it:
   if (myFile) {
     Serial.print("Writing to test.txt...");
-    myFile.println("testing 1, 2, 3.");
+    //myFile.println("testing 1, 2, 3.");
     // close the file:
-    //myFile.close();
+    myFile.close();
     Serial.println("done.");
   } else {
     // if the file didn't open, print an error:
@@ -73,7 +81,9 @@ void setup() {
   }
 
   // re-open the file for reading:
-  myFile = SD.open("test.txt");
+  if(!myFile){
+    myFile = SD.open("test.txt");
+  }
   if (myFile) {
     Serial.println("test.txt:");
 
@@ -87,9 +97,14 @@ void setup() {
     // if the file didn't open, print an error:
     Serial.println("error opening test.txt");
   }
+
+  // start up the pressure sensor 
+    pressure.begin();
 }
 
 void loop() {
+  //Open the file
+  myFile = SD.open("test.txt", FILE_WRITE);
   // nothing happens after setup
   // read the analog input
   analog_data = analogRead(sensor_pin);
@@ -102,17 +117,17 @@ void loop() {
   temperatureC = (voltage_reading - 0.5) * 100; 
   
   // print out our values 
-  Serial.print("Analog Value: ");
-  Serial.println(analog_data);
-  myFile.print("Analog Value: ");
-  myFile.println(analog_data);
+  //Serial.print("Analog Value: ");
+  //Serial.println(analog_data);
+  //myFile.print("Analog Value: ");
+  //myFile.println(analog_data);
   
   Serial.print("Voltage Value: ");
   Serial.print(voltage_reading);
   Serial.println(" V");
   myFile.print("Voltage Value: ");
   myFile.print(voltage_reading);
-  myFile.println(" V")
+  myFile.println(" V");
   
   Serial.print("Temperature: ");
   Serial.print(temperatureC);
@@ -126,34 +141,74 @@ void loop() {
   //Delay between temperature sensor and accelerometer data
   delay(1000); 
 
-  Wire.beginTransmission(MPU);
-  Wire.write(0x3B);  
-  Wire.endTransmission(false);
-  Wire.requestFrom(MPU,12,true);  
-  AcX=Wire.read()<<8|Wire.read();    
-  AcY=Wire.read()<<8|Wire.read();  
-  AcZ=Wire.read()<<8|Wire.read();  
-  GyX=Wire.read()<<8|Wire.read();  
-  GyY=Wire.read()<<8|Wire.read();  
-  GyZ=Wire.read()<<8|Wire.read();  
+  //Wire.beginTransmission(MPU);
+  //Wire.write(0x3B);  
+  //Wire.endTransmission(false);
+  //Wire.requestFrom(MPU,12,true);  
+  //AcX=Wire.read()<<8|Wire.read();    
+  //AcY=Wire.read()<<8|Wire.read();  
+  //AcZ=Wire.read()<<8|Wire.read();  
+  //GyX=Wire.read()<<8|Wire.read();  
+  //GyY=Wire.read()<<8|Wire.read();  
+  //GyZ=Wire.read()<<8|Wire.read();  
   
-  Serial.print("Accelerometer: ");
-  Serial.print("X = "); Serial.print(AcX);
-  Serial.print(" | Y = "); Serial.print(AcY);
-  Serial.print(" | Z = "); Serial.println(AcZ);
-  myFile.print("Accelerometer: ");
-  myFile.print("X = "); Serial.print(AcX);
-  myFile.print(" | Y = "); Serial.print(AcY);
-  myFile.print(" | Z = "); Serial.println(AcZ); 
+  //Serial.print("Accelerometer: ");
+  //Serial.print("X = "); Serial.print(AcX);
+  //Serial.print(" | Y = "); Serial.print(AcY);
+  //Serial.print(" | Z = "); Serial.println(AcZ);
+  //myFile.print("Accelerometer: ");
+  //myFile.print("X = "); Serial.print(AcX);
+  //myFile.print(" | Y = "); Serial.print(AcY);
+  //myFile.print(" | Z = "); Serial.println(AcZ); 
   
-  myFile.print("Gyroscope: ");
-  myFile.print("X = "); Serial.print(GyX);
-  myFile.print(" | Y = "); Serial.print(GyY);
-  myFile.print(" | Z = "); Serial.println(GyZ);
-  myFile.println(" ");
+  //myFile.print("Gyroscope: ");
+  //myFile.print("X = "); Serial.print(GyX);
+  //myFile.print(" | Y = "); Serial.print(GyY);
+  //myFile.print(" | Z = "); Serial.println(GyZ);
+  //myFile.println(" ");
+
+  
+
+//Code for the Barometer
+char status;
+    double T,P,p0,a;
+    
+    // You must first get a temperature measurement to perform a pressure reading.
+    status = pressure.startTemperature();
+    delay(status);
+    
+    // Retrieve the completed temperature measurement, measurement is stored in the variable T.
+    status = pressure.getTemperature(T);
+    
+    // Start a pressure measurement: the parameter is the oversampling setting, from 0 to 3 (highest res, longest wait).
+    status = pressure.startPressure(3);
+    delay(status);
+    
+    // Retrieve the completed pressure measurement, measurement is stored in the variable P.
+    status = pressure.getPressure(P,T);
+    
+    // Retrieve the relative (sea-level) pressure, measurement is stored in the variable p0. 
+    p0 = pressure.sealevel(P, ALTITUDE);
+    
+    // Retreive the current altitude from the pressure reading
+    a = pressure.altitude(P,p0);
+
+    Serial.print("Pressure Value: ");
+    Serial.print(p0);
+    Serial.println(" kPa");
+    myFile.print("Pressure Value: ");
+    myFile.print(p0);
+    myFile.print(" kPa");
+    myFile.println("");
+    //myFile.print("Pressure Value: ");
+    //myFile.print(p0);
+    //myFile.println(" kPa");
+    
   
   //Delay between accelerometer and temperature sensor code
-  delay(1000);
+  delay(5000);
 
+  //Closes the file
+myFile.close();
   
 }
